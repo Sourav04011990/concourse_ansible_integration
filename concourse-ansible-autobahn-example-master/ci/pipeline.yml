@@ -1,0 +1,52 @@
+resources:
+
+- name: master
+  type: git
+  icon: github-circle
+  webhook_token: ((github-enterprise.webhook-token))
+  check_every: 24h
+  source:
+    branch: master
+    uri: https://github.comcast.com/cubits/concourse-ansible-autobahn-example
+    username: git
+    password: ((github-enterprise.access-token))
+
+- name: recipes
+  type: git
+  icon: github-circle
+  webhook_token: ((github-enterprise.webhook-token))
+  check_every: 24h
+  source:
+    branch: 0.0.71
+    uri: https://github.comcast.com/concourse/recipes
+    username: git
+    password: ((github-enterprise.access-token))
+
+jobs:
+
+- name: run-ansible-playbook-through-autobahn-using-recipes
+  serial: true
+  plan:
+  - get: master
+  - get: recipes
+  - task: get-autobahn-certificate
+    file: recipes/tasks/misc/get_autobahn_certificate.yml
+    params:
+      ATB_GHE_TOKEN: ((github-enterprise.access-token))
+      ATB_GHE_ORG: cubits
+      ATB_VAULT_TARGET: https://vault-ho.autobahn.comcast.com:8200
+      ATB_APP_ROLE: ((svcubitsab.approle))
+      ATB_SSH_ROLE: cubits_ci_app_keysigner
+      ATB_PUBLIC_KEY: ((svcubitsab.pubkey))
+      ATB_CERT_TTL: 3600
+  - task: run-ansible-playbook
+    file: recipes/tasks/misc/ansible.yml
+    input_mapping:
+      code: master
+    params:
+      ANSIBLE_USER: svcubitsab
+      ANSIBLE_USER_PRIVATE_KEY: ((svcubitsab.key))
+      ANSIBLE_USER_PUBLIC_KEY: ((svcubitsab.pubkey))
+      ANSIBLE_INVENTORY: code/ansible/inventory
+      ANSIBLE_PLAYBOOK: code/ansible/playbook.yml
+      AUTOBAHN_CERT_PATH: autobahn-certificate/atb_service_user-cert.pub

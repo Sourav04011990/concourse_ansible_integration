@@ -1,0 +1,11 @@
+---
+- name: hello world
+  hosts: all
+  tasks:
+  - name: create /tmp/hello_world.txt file
+    copy:
+      content: hello world
+      dest: /tmp/hello_world.txt
+
+  - name: show /tmp/hello_world.txt file contents
+    command: cat /tmp/hello_world.txt
